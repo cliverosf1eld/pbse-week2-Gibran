@@ -7,7 +7,7 @@ For cancelling a booking, I would use POST /bookings/{id}/cancellation rather th
 ## Checkpoint 3
 Reading the available courts or an existing booking is safe to repeat because repeating the request doesn't create another resource. But creating a booking is different because retrying after a network failure could create another booking, so the booking operation needs protection using an idempotency key.
 
-## Part 4 — Self-Check
+## Part 4: Self-Check
 
 ### Question 1
 I would reject `POST /v1/orders/{id}/markReady` because `markReady` is a verb in the URI rather than a resource represented by a noun. It also hides the state transition inside an action name instead of representing the transition as a resource. I would use a noun-based address such as `POST /v1/orders/{id}/readiness`.
