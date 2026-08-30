@@ -23,3 +23,9 @@ The dangerous operation in my system is `POST /bookings`, represented by the `cr
 
 ### Question 5
 I am still unsure about how the idempotency key should actually be stored and checked by the backend when the same booking request is retried.
+
+## Where I Stand
+
+### Result: PASS
+
+I believe I meet the PASS criteria because my OpenAPI specification lints successfully, and I saved the successful mock responses and the missing-header refusal in the `spec/evidence` directory. My consequential operation is `POST /bookings`, and it requires the `Idempotency-Key` header. The specification was committed before any service code, so I believe I meet the five lab conditions for PASS.
