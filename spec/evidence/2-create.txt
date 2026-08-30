@@ -1,0 +1,12 @@
+HTTP/1.1 404 Not Found
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: *
+content-type: application/problem+json
+Content-Length: 198
+Date: Sun, 30 Aug 2026 03:12:26 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"https://stoplight.io/prism/errors#NO_PATH_MATCHED_ERROR","title":"Route not resolved, no path matched","status":404,"detail":"The route /things hasn't been found in the specification file"}
