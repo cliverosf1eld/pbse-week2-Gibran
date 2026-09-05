@@ -84,7 +84,7 @@ paths:
           description: Filter to things in one status.
           schema:
             type: string
-            enum: [draft, active, retired]
+            enum: [active, retired]
         - name: limit
           in: query
           required: false
@@ -249,12 +249,11 @@ paths:
                 type: https://api.example.com/problems/illegal-transition
                 title: That status change is not permitted
                 status: 409
-                detail: thg_51Fa93cD is draft; retirement is refused.
-                instance: /v1/things/thg_51Fa93cD/retirement
-                from: draft
+                detail: crt_51Fa93cD is active; retirement is refused.
+                instance: /v1/courts/crt_51Fa93cD/retirement
+                from: active
                 to: retired
                 allowedFrom: [active]
-
 components:
 
   schemas:
@@ -267,7 +266,7 @@ components:
     # ---------------------------------------------------------------
     Court:
       type: object
-      required: [id, name, location, courtType, isAvailable]
+      required: [id, name, location, courtType, isAvailable, status]
       properties:
         id:
           type: string
@@ -287,6 +286,12 @@ components:
         isAvailable:
           type: boolean
           example: true
+            status:
+        status:
+          type: string
+          enum: [active, retired]
+          description: Lifecycle status of the badminton court.
+          example: active
 
     NewBooking:
       type: object
@@ -340,9 +345,10 @@ components:
       type: object
       required: [thingId, reason, retiredAt]
       properties:
-        thingId:
+        courtId:
           type: string
-          example: thg_51Fa93cD
+          pattern: '^crt_[A-Za-z0-9]{3,}$'
+          example: crt_51Fa93cD
         reason:
           type: string
           example: Replaced by a newer revision
