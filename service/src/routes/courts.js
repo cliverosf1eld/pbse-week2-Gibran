@@ -6,19 +6,24 @@ const { problem } = require("../problem");
 const router = express.Router();
 
 router.get("/courts", async (req, res) => {
+  const allowedQueryParameters = new Set(["status", "limit", "cursor"]);
+  const unknownQueryParameter = Object.keys(req.query).find(
+    (parameter) => !allowedQueryParameters.has(parameter)
+  );
+
+  if (unknownQueryParameter) {
+    return problem(res, 400, "malformed-request", {
+      detail: `Unknown query parameter: ${unknownQueryParameter}`
+    });
+  }
+
   const { status, limit, cursor } = req.query;
   let decodedCursor;
 
   // An empty cursor is schema-valid and means the first page.
   if (cursor !== undefined && cursor !== "") {
     const decoded = Buffer.from(cursor, "base64").toString("utf8");
-    const reEncoded = Buffer.from(decoded).toString("base64");
-
-    if (reEncoded !== cursor || !/^crt_[A-Za-z0-9]{3,}$/.test(decoded)) {
-      return problem(res, 400, "malformed-request", { detail: "Invalid cursor value" });
-    }
-
-    decodedCursor = decoded;
+    decodedCursor = /^crt_[A-Za-z0-9]{3,}$/.test(decoded) ? decoded : undefined;
   }
 
   let parsedLimit = 20;
