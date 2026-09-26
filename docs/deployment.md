@@ -46,8 +46,24 @@ later as a 500 on every write.
    `service/`, not at the repository root.
 4. Framework preset: **Other**. The build needs no configuration beyond that,
    because `service/vercel.json` routes every path to `service/api/index.js`.
-5. Under **Environment Variables**, add `DATABASE_URL` with the Neon string.
-   Apply it to Production, Preview and Development.
+5. Under **Environment Variables**, add the following, applied to
+   Production, Preview and Development:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | the Neon connection string |
+   | `OIDC_ISSUER` | the realm's issuer URL |
+   | `OIDC_JWKS_URI` | the realm's JWKS endpoint |
+   | `OIDC_AUDIENCE` | `badminton-api` |
+   | `CORS_ALLOWED_ORIGINS` | the deployed web application's origin |
+
+   The first four are required: `src/config.js` refuses to start without
+   them. `CORS_ALLOWED_ORIGINS` is comma-separated, and each entry is a
+   full origin — scheme, host, and port — with no trailing slash. It must
+   include the deployed web application and, while developing against the
+   deployed service, `http://localhost:5173`. An origin missing here does
+   not stop the service processing that origin's requests; it stops the
+   browser letting the page read the answers (A.4).
 6. **Deploy.**
 
 Do not set `PORT`. There is no long-running process to bind one; `api/index.js`
@@ -100,5 +116,13 @@ is that the data lives outside the process, which a redeploy shows just as well.
 The first request after a quiet period pays a cold start of a second or two.
 Wake it before demonstrating.
 
-`DATABASE_URL` is the only secret, and it is set in Vercel's dashboard.
-Everything else is committed and identical in every environment.
+`DATABASE_URL` is the only secret, and it is set in Vercel's dashboard. The
+other variables are environment-specific rather than secret: the OIDC
+addresses and the CORS allow-list differ per deployment, which is exactly
+why none of them is committed.
+
+Deploying the web application to a new address means two changes, both
+outside its own code: add that origin to `CORS_ALLOWED_ORIGINS` here, and
+add `<origin>/callback` to the Keycloak client's redirect URIs. Forgetting
+the first shows up as a CORS error in the console; forgetting the second
+shows up as a Keycloak error page before the application ever loads.

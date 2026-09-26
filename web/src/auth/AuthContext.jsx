@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import keycloak from "./keycloak";
+import keycloak, { REQUESTED_SCOPES } from "./keycloak";
 
 const AuthContext = createContext(null);
 
@@ -17,9 +17,20 @@ function getCurrentLocation() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+// The scopes carried by the current access token. Used only to decide what
+// the navigation offers (A.2 item 2). It is user experience, never access
+// control: this runs in the browser, where it can be edited or skipped
+// entirely. Every one of these operations is refused again by the service.
+function currentScopes() {
+  const scope = keycloak.tokenParsed?.scope;
+
+  return typeof scope === "string" ? scope.split(" ") : [];
+}
+
 export function AuthProvider({ children }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [scopes, setScopes] = useState([]);
 
   const initialized = useRef(false);
 
@@ -37,9 +48,11 @@ export function AuthProvider({ children }) {
           pkceMethod: "S256",
           checkLoginIframe: false,
           redirectUri: CALLBACK_URL,
+          scope: REQUESTED_SCOPES,
         });
 
         setAuthenticated(isAuthenticated);
+        setScopes(isAuthenticated ? currentScopes() : []);
       } catch (error) {
         console.error("Keycloak initialization failed:", error);
         setAuthenticated(false);
@@ -60,6 +73,7 @@ export function AuthProvider({ children }) {
 
       keycloak.clearToken();
       setAuthenticated(false);
+      setScopes([]);
     }
 
     window.addEventListener(
@@ -83,6 +97,7 @@ export function AuthProvider({ children }) {
 
     await keycloak.login({
       redirectUri: CALLBACK_URL,
+      scope: REQUESTED_SCOPES,
     });
   }
 
@@ -90,6 +105,7 @@ export function AuthProvider({ children }) {
     sessionStorage.removeItem(RETURN_TO_KEY);
     keycloak.clearToken();
     setAuthenticated(false);
+    setScopes([]);
 
     await keycloak.logout({
       redirectUri: `${window.location.origin}/courts`,
@@ -102,6 +118,8 @@ export function AuthProvider({ children }) {
     initializing,
     login,
     logout,
+    scopes,
+    hasScope: (scope) => scopes.includes(scope),
     returnToKey: RETURN_TO_KEY,
   };
 

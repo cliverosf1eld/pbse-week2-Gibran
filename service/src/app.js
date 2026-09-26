@@ -8,6 +8,7 @@ const express = require("express");
 const courtsRouter = require("./routes/courts");
 const bookingsRouter = require("./routes/bookings");
 const authenticate = require("./auth/authenticate");
+const cors = require("./middleware/cors");
 const { notFoundHandler, globalErrorHandler } = require("./middleware/error");
 
 // Refuse to start when configuration is missing. Either DATABASE_URL alone,
@@ -36,6 +37,11 @@ app.use((req, res, next) => {
   res.set("X-Request-Id", req.id);
   next();
 });
+
+// A.4 — registered before the body parser and before authenticate. A
+// preflight carries no token and no body; it must be answered here rather
+// than travel down a stack that would refuse it.
+app.use(cors);
 
 app.use(express.json());
 

@@ -72,3 +72,90 @@ When the API returns `403 Forbidden`, the browser explains that the authenticate
 When the API returns `404 Not Found` for a specific resource, the browser shows a generic not-found message without revealing whether the resource exists for another user.
 
 Signing out clears the local authentication state and calls the Keycloak logout endpoint.
+
+## A.2 Application Skeleton and Routing
+
+The browser client lives in `web/` (React + Vite). It is one client of the
+service among several possible ones, and holds no rules of its own.
+
+**One address per screen.** Every workflow in the A.1 table is reachable by
+URL, so any screen can be linked, bookmarked, and reopened in a second tab
+without losing its place.
+
+| Address | Screen |
+|---|---|
+| `/` | redirects to `/courts` |
+| `/courts` | court list |
+| `/courts/{courtId}` | court detail |
+| `/bookings` | the signed-in student's bookings |
+| `/bookings/new` | booking form |
+| `/bookings/{bookingId}` | booking detail |
+| `/admin/courts` | court management |
+| `/callback` | returns from Keycloak to the remembered address |
+| anything else | not-found screen |
+
+No screen keeps its identity in a component variable. `/bookings/{id}`
+re-fetches from the id in the URL, which is why opening it in a new tab
+shows the same booking rather than the start page.
+
+**One network layer.** `web/src/services/api.js` is the only file that calls
+`fetch`. It owns the base URL, attaches the `Authorization` header, and
+turns error responses into `ApiError`. Views call domain functions —
+`getCourts()`, `cancelBooking()` — so that uniform 401 handling, ETag
+bookkeeping, and a base URL that changes at deployment each have exactly one
+place to live.
+
+**Navigation reflects role, and that is all it does.** The court-management
+link is rendered only for a token carrying `courts:write`. This is user
+experience, not access control: the address can still be typed in directly,
+and when it is, the service refuses the API calls behind it (A.9).
+
+**Configuration comes from the environment.** `web/.env.example` lists every
+variable; copy it to `web/.env.local`. Both the service base URL and the
+Keycloak URL, realm, and client id are read from it, so nothing has to be
+edited in source to deploy. Vite inlines every `VITE_`-prefixed variable
+into the bundle where any visitor can read it, so no secret is kept there.
+
+One variable is not an address: `VITE_KEYCLOAK_SCOPES`. Scopes marked
+*optional* on a Keycloak client are absent from the access token unless the
+client asks for them, and `bookings:write` is optional on
+`badminton-student-web`. Without requesting it, the application signs a
+student in successfully and then receives 403 on every booking it tries to
+create.
+
+## A.4 Same-origin Policy and CORS
+
+The web application and the service are different origins — different
+scheme, host, and port — so the service states which origins may read its
+replies. This is configured in `service/src/middleware/cors.js` and is
+covered by `service/tests/cors/cors.test.js` in CI.
+
+**The allow-list is explicit.** Origins come from `CORS_ALLOWED_ORIGINS`, a
+comma-separated list. The incoming `Origin` header is never reflected back:
+reflecting it passes every "does cross-origin work?" test while in fact
+permitting every origin on the internet, because the check can never fail.
+`Vary: Origin` is sent on every response, including refused ones, so a
+shared cache cannot serve one origin's allow-header to a page from another.
+
+**The preflight is answered above the authentication layer.** A request
+carrying `Authorization` and `Content-Type: application/json` is not simple,
+so the browser first sends `OPTIONS` with `Access-Control-Request-Method`
+and `-Request-Headers`. That preflight carries no token — it is asking
+permission to send one. If it reached `app.use(authenticate)` every
+cross-origin write would fail with a 401 that had nothing to do with the
+user's session.
+
+**`ETag` is exposed deliberately.** Browsers hide all but a short default
+list of response headers from the page. An `ETag` the client cannot read is
+one it cannot send back in `If-None-Match`, so A.7 would silently never
+produce a 304. `If-Match` and `If-None-Match` are likewise already in the
+allowed request headers, so A.8 does not fail at the preflight.
+
+**CORS is not access control.** It governs what the browser lets a page
+*read*, not what the service does. A request from an unlisted origin is
+still delivered and still processed — the test
+`an unlisted origin's real request is still processed` asserts exactly that,
+and gets a 201. "CORS blocked it, so the booking was never created" is
+false. Every rule that matters is enforced by the authorisation layers from
+Session 4, which is what A.9 verifies.
+

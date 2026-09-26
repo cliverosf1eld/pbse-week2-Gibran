@@ -1,16 +1,35 @@
-# React + Vite
+# Badminton Court Booking — web application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The browser client for the Session 5 assignment. It is one of several
+possible clients of the same service; it holds no rules of its own.
 
-Currently, two official plugins are available:
+## Running it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cp .env.example .env.local   # then fill in the addresses
+npm install
+npm run dev                  # http://localhost:5173
+```
 
-## React Compiler
+It needs two things already running:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- the service, from `../service` (`npm start`)
+- Keycloak, from `../infra` (`docker compose -f docker-compose.auth.yml up`)
 
-## Expanding the ESLint configuration
+The service must list this application's origin in `CORS_ALLOWED_ORIGINS`,
+and the Keycloak client must list `<origin>/callback` as a redirect URI.
+Both are per-origin: a deployment on a new address needs both updated.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Shape
+
+```text
+src/
+├── services/api.js     the only file that calls fetch — base URL, the
+│                       Authorization header, error translation
+├── auth/               Keycloak adapter and the session context
+└── views/              one screen per address, four states each
+```
+
+Configuration comes from the environment (`.env.example` lists it). Nothing
+here is secret: Vite inlines every `VITE_`-prefixed variable into the bundle,
+where any visitor can read it.

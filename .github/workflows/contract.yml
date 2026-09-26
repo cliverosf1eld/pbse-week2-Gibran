@@ -135,6 +135,13 @@ jobs:
         run: npm run test:authz
         working-directory: service
 
+      # A.4: the CORS configuration. These need neither database nor issuer,
+      # so a red here means the allow-list itself regressed — most likely
+      # somebody reintroduced the reflected Origin header.
+      - name: CORS tests
+        run: npm run test:cors
+        working-directory: service
+
       - name: Service log
         if: always()
         run: |

@@ -2,6 +2,14 @@ import keycloak from "../auth/keycloak";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// A.2 item 4 — fail at startup, loudly, rather than at the first request
+// with a fetch to "undefined/courts" that reads like a network fault.
+if (!API_BASE_URL) {
+  throw new Error(
+    "VITE_API_BASE_URL is not set. Copy web/.env.example to web/.env.local."
+  );
+}
+
 export class ApiError extends Error {
   constructor(message, status, data = null) {
     super(message);
