@@ -8,9 +8,32 @@ expected-statuses = ["2xx", 401, 403, 404, 409, 422]
 # it sends values like "true" or "{}" with an otherwise valid body and expects
 # them accepted. A malformed key is a 400 before any work is done, which is the
 # first row of the idempotency decision table in the assignment.
+# include-name, not include-path plus include-method: two include filters in
+# one block are OR-ed, so that pair would also match every other POST.
 [[operations]]
-include-path = "/bookings"
-include-method = "POST"
+include-name = "POST /bookings"
 
 [operations.checks.positive_data_acceptance]
 expected-statuses = ["2xx", 400, 401, 403, 404, 409, 422]
+
+# A.8: cancellation and retirement are conditional writes. A generated If-Match
+# is a random string, never the entity's current ETag, so an otherwise valid
+# request is correctly refused with 412; an empty or absent one is 428. Both
+# are documented on these operations in openapi.yaml.
+[[operations]]
+include-name = "POST /bookings/{bookingId}/cancellation"
+
+[operations.checks.positive_data_acceptance]
+expected-statuses = ["2xx", 401, 403, 404, 409, 412, 422, 428]
+
+[operations.checks.missing_required_header]
+expected-statuses = [400, 401, 403, 406, 415, 422, 428]
+
+[[operations]]
+include-name = "POST /courts/{courtId}/retirement"
+
+[operations.checks.positive_data_acceptance]
+expected-statuses = ["2xx", 401, 403, 404, 409, 412, 422, 428]
+
+[operations.checks.missing_required_header]
+expected-statuses = [400, 401, 403, 406, 415, 422, 428]

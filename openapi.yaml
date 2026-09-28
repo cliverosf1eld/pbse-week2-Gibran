@@ -448,11 +448,14 @@ paths:
                   # reason is stored as text, and a NUL byte cannot be held
                   # in a Postgres text column. Leaving it unsaid let a
                   # schema-compliant request reach the database and come
-                  # back as a 500.
-                  pattern: '^[^\u0000-\u001F\u007F]+$'
+                  # back as a 500. At least one character must also be
+                  # something other than whitespace, because the service
+                  # trims before it checks for emptiness.
+                  pattern: '^[^\u0000-\u001F\u007F]*[^\s﻿\u0000-\u001F\u007F][^\u0000-\u001F\u007F]*$'
                   description: |
                     Why the booking is being cancelled. Free text, one to
-                    500 characters, no control characters.
+                    500 characters, not only whitespace, no control
+                    characters.
                   example: Cannot make the booked slot
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -557,6 +560,14 @@ paths:
               properties:
                 reason:
                   type: string
+                  # The same rule as the cancellation reason, enforced by the
+                  # same parser (service/src/schemas/reason.js).
+                  minLength: 1
+                  maxLength: 500
+                  pattern: '^[^\u0000-\u001F\u007F]*[^\s﻿\u0000-\u001F\u007F][^\u0000-\u001F\u007F]*$'
+                  description: |
+                    Why the court is being retired. Free text, one to 500
+                    characters, not only whitespace, no control characters.
                   example: Replaced by a newer revision
       parameters:
         - $ref: '#/components/parameters/IfMatch'
