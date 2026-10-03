@@ -9,10 +9,10 @@ Welcome to the repository for **Week 2 Group Assignment** in **Platform Based So
 
 This repository contains the codebase and deliverables developed during Week 2 of the Platform Based Software Engineering course. The project focuses on setting up foundational platform architectures, modular component design, and collaborative software development practices.
 
-* Badminton Court Booking System: A customer books the available court and the staff checks and confirms it on the system
+* Badminton Court Booking System: a student books an available court for a one-hour slot, sees it in their bookings and can cancel it; an administrator manages the courts and can retire one. Staff and administrators can see everyone's bookings
 * Interface: openapi.yaml (repository root)
-* Deployment URL: _not deployed yet - see docs/deployment.md_
-* Deploying: docs/deployment.md
+* Deployment URL: https://pbse-week2.vercel.app (web application) — the API is served from the same address under `/v1`
+* Deploying: docs/deployment.md, and [Deployment](#deployment) below
 * Run the mock: cd spec && npm install && npm run mock
 
 ---
@@ -31,15 +31,25 @@ This repository contains the codebase and deliverables developed during Week 2 o
 
 ```text
 pbse-week2-Gibran/
-├── docs/                 # Documentation & assignment guidelines
-├── src/                  # Main application source code
-│   ├── components/       # Reusable UI/logic modules
-│   ├── services/         # API & business logic
-│   └── views/            # Screen / page layouts
-├── public/               # Static assets (images, icons)
-├── .gitignore            # Git ignore configuration
-├── README.md             # Project documentation
-└── package.json / requirements.txt  # Project dependencies
+├── openapi.yaml          # The contract: every operation, scope and response
+├── vercel.json           # One Vercel project, two services: web and api
+├── web/                  # Browser client (React + Vite)
+│   └── src/
+│       ├── views/        # One component per screen
+│       ├── components/   # Field, Skeleton, StaleNotice
+│       ├── auth/         # Keycloak adapter and AuthContext
+│       ├── services/     # api.js — the only file that calls fetch
+│       └── lib/          # View states, useResource, ETag store, problems
+├── service/              # The API (Node + Express + PostgreSQL)
+│   ├── src/              # routes, schemas, store, representations, auth
+│   ├── api/index.js      # Vercel serverless entry point
+│   ├── db/               # schema.sql, seed.sql, apply.js
+│   └── tests/            # authz, cors and conditional suites
+├── infra/                # Keycloak (docker compose + realm export)
+├── spec/                 # Contract tooling: Redocly lint/docs, Prism mock
+├── tests/contract/       # Schemathesis contract suite run in CI
+├── docs/                 # Deployment guide, ADRs, A.9 runbook, checklists
+└── .github/workflows/    # CI: the contract job
 ```
 
 ## A.1 Application Workflows
@@ -88,8 +98,9 @@ without losing its place.
 | `/courts` | court list |
 | `/courts/{courtId}` | court detail |
 | `/bookings` | the signed-in student's bookings |
-| `/bookings/new` | booking form |
+| `/bookings/new` | booking form; `?courtId=` pre-selects a court |
 | `/bookings/{bookingId}` | booking detail |
+| `/bookings/{bookingId}/cancel` | cancellation form |
 | `/admin/courts` | court management |
 | `/callback` | returns from Keycloak to the remembered address |
 | anything else | not-found screen |
@@ -104,6 +115,12 @@ turns error responses into `ApiError`. Views call domain functions —
 `getCourts()`, `cancelBooking()` — so that uniform 401 handling, ETag
 bookkeeping, and a base URL that changes at deployment each have exactly one
 place to live.
+
+**Getting to a booking takes one click from anywhere.** A signed-in user sees
+*Courts*, *My Bookings* and *Book a court* in the navigation, and a court's
+detail page offers *Book this court*, which opens the form with that court
+already selected (`/bookings/new?courtId=…`). The link is not shown for a
+court that is retired or unavailable.
 
 **Navigation reflects role, and that is all it does.** The court-management
 link is rendered only for a token carrying `courts:write`. This is user
@@ -196,6 +213,15 @@ its own condition and old data does not. The age marker is rendered
 whenever there is content, not only when a refresh has failed — the time
 the data was fetched is part of reading it honestly.
 
+**Where the model is used.** The court screens — the court list, court
+detail and court management — read through `useResource` and get all of the
+above, including the skeleton, the stale marker and background polling. The
+booking screens (my bookings, booking detail, the booking form and the
+cancellation form) were reworked in Session 5 and now load their data
+directly: each shows a loading line, an explicit empty message where a list
+can be empty, and a separate answer for 401, 403, 404 and other failures,
+with a retry button. They do not poll and do not show an age marker.
+
 **A single object has no empty state.** An absent court or booking is a 404,
 which is the error state. Only a collection can be legitimately empty.
 Conflating the two would show "no bookings" for a booking that belongs to
@@ -230,27 +256,43 @@ the `Problem` schema in `openapi.yaml`, where it previously was not.
 
 **The client reads the document, not the text.** `web/src/lib/problem.js`
 turns a refusal into a `Problem` carrying `type`, `title`, `detail` and the
-invalid parameters indexed by field name. Forms ask it `fieldReason('endTime')`
-and put the answer under that input (`components/Field.jsx`), with
-`aria-invalid` and `aria-describedby` so the message reaches a screen reader
-too.
+invalid parameters indexed by field name (`fieldReason('endTime')`). Every
+error raised by `api.js` is one of these.
 
-**Field, form, and session failures are three different places.** A refusal
-naming fields lands on those fields. A refusal naming none — an overlapping
-slot, a retired court — is about the request as a whole and is shown at the
-level of the form. A 401 or 403 is neither, and is handled as A.3 describes.
+**The booking form offers only bookable slots.** Session 5 reworked it
+around how a court is actually booked: the user picks a court, a date and a
+one-hour slot between 08:00 and 22:00, rather than typing two timestamps.
+Only active, available courts are listed, and a slot that has already
+started is disabled — and cleared if it starts while the page is open. Two
+consequences follow. The end time is always the start plus one hour, so the
+"end before start" refusal (422) can no longer be produced from the form; it
+is still enforced by the service and still covered by its tests. And a slot
+somebody else has already booked is not known in advance, so it is the
+service that refuses it.
+
+**Form and session failures are shown in different places.** A refusal of
+the request as a whole — an overlapping slot (409), a retired court — is
+shown above the form, in domain terms: *"This time slot is no longer
+available. Please choose another slot."* Other refusals show the service's
+`detail`. A 401 or 403 replaces the form, as A.3 describes. The cancellation
+form follows the same pattern, and checks locally that a reason is given and
+is at most 500 characters.
 
 **Client validation is user experience and guarantees nothing.** Every rule
-in `checkLocally` exists again in `service/src/schemas/bookings.js`, which
-is the only place a rule actually holds. A.9 is what demonstrates this.
+the form checks exists again in `service/src/schemas/bookings.js` and
+`service/src/schemas/reason.js`, which is the only place a rule actually
+holds. A.9 is what demonstrates this.
 
-**The idempotency key identifies the attempt, not the click.** It is
-generated once for a set of form values and kept in a ref: pressing submit
-again after a failure is the same intent and must not create a second
-booking. Editing any field makes it a different request, so the key is
-renewed — the service answers a reused key carrying a different body with
-409. Disabling the submit button while the request is in flight is
-prevention; the key is the guarantee.
+**One idempotency key per submission.** The form generates a fresh
+`Idempotency-Key` each time it is submitted, and the submit button is
+disabled while the request is in flight, so a double click cannot send two
+requests. The service's guarantee — the same key and body are answered with
+the stored 201, a reused key with a different body is a 409 — is exercised
+in CI by the idempotency replay step. Note the trade-off: because the key is
+not kept between submissions, pressing *Book* again after a request whose
+answer was lost is treated as a new attempt. The overlap check then refuses
+it with 409 if the first one did succeed, so no second booking is made for
+the same slot.
 
 The cancellation operation carries no idempotency key, deliberately: the
 contract makes it naturally idempotent, answering 200 with the existing
@@ -295,9 +337,12 @@ what is held is current: the stale marker is cleared and `fetchedAt` moves
 forward, because the service has just said this version is current as of
 now.
 
-**Polling** runs on the two collections — courts every 30s, bookings every
-15s — as background reads, so the list on screen is never replaced by a
-skeleton. A tab nobody is looking at is not polled.
+**Polling** runs on the court list and the court-management list, every
+30s, as background reads, so the list on screen is never replaced by a
+skeleton. A tab nobody is looking at is not polled. The booking screens do
+not poll since their Session 5 rework (A.5); they read once when opened and
+again on retry. Every read still goes through `api.js`, so each one still
+sends `If-None-Match` and can be answered 304.
 
 **Cache-Control: private, no-cache** accompanies every ETag. These
 representations are shaped by who asked — a student's booking list is theirs
@@ -351,12 +396,18 @@ different tag from the student who owns it — correctly, because they read
 something different.
 
 **A 412 is a normal condition, not an error.** The client does not show an
-error banner. It re-reads, re-renders, and says in domain terms that
-somebody else got there first:
+error screen. It re-reads, re-renders, and shows the entity as it stands
+now:
 
-> This booking was already handled by somebody else while this page was
-> open — another window, or another device signed in as you. Nothing you
-> typed was saved, and the booking is shown below as it stands now.
+- **Court management** keeps the list on screen and says, above it:
+
+  > That court was changed by a colleague while this page was open.
+  > Nothing was modified, and the list below is as it stands now.
+
+- **The cancellation form** reloads the booking. When two windows cancel
+  the same booking, the second window's reload finds it already cancelled
+  and shows *Booking Already Cancelled* with its details. Nothing the
+  second window sent was applied.
 
 The 412 carries the current `ETag`, so a client can recover without an
 extra round trip to discover what it missed.
@@ -399,6 +450,38 @@ that should be able to obtain them. There is one web client for everybody.
 The reasoning, and why this does not reverse the Session 4 decision to
 authorise on scopes rather than roles, is in
 `docs/decisions/0004-peran-dan-penerbitan-scope.md`.
+
+## Deployment
+
+**One address for the application and the API.** The root `vercel.json`
+deploys the repository as one Vercel project with two services:
+
+| Path | Served by |
+|---|---|
+| `/v1/*` and `/health` | `api` — the Express app in `service/`, run as a serverless function through `service/api/index.js` |
+| everything else | `web` — the Vite build of `web/`, with every path rewritten to `index.html` |
+
+The rewrite matters: opening `/bookings/{id}` directly, refreshing it, or
+opening it in a new tab would otherwise reach a host looking for a file at
+that path, and answer 404 before React Router ever saw the URL.
+
+The database is Neon PostgreSQL, reached through `DATABASE_URL`, which is set
+in Vercel's dashboard and never committed. Step-by-step instructions are in
+`docs/deployment.md`.
+
+**Keycloak is reachable from outside `localhost`.** The deployed web
+application signs users in against a Keycloak the browser can reach, so the
+compose file takes its public address from `KC_HOSTNAME` (defaulting to
+`http://localhost:8080` for local work). `KC_PROXY_HEADERS: xforwarded`
+lets Keycloak run behind a reverse proxy that terminates HTTPS: it builds
+its redirect and issuer URLs from the `X-Forwarded-*` headers, so they
+carry the public `https://` address rather than the internal one. The
+issuer it reports must match the service's `OIDC_ISSUER` exactly, or every
+token is refused with 401.
+
+The web client's realm (`badminton-booking`) and client id
+(`badminton-student-web`) are set in `web/src/auth/keycloak.js`; the
+Keycloak address comes from `VITE_KEYCLOAK_URL`.
 
 ## Test accounts for the demonstration
 
