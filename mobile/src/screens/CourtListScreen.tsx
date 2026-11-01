@@ -1,7 +1,6 @@
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -25,43 +24,44 @@ type ViewState =
   | { kind: 'empty' }
   | { kind: 'content'; items: Court[] };
 
+async function loadCourts(): Promise<ViewState> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/courts`, {
+      headers: {
+        // For the local Prism mock server only.
+        // Session 9 will add real Keycloak authentication.
+        Authorization: 'Bearer mock-token',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed (${response.status})`);
+    }
+
+    const body: { items?: Court[] } = await response.json();
+    const courts = body.items ?? [];
+    return courts.length === 0
+      ? { kind: 'empty' }
+      : { kind: 'content', items: courts };
+  } catch {
+    return {
+      kind: 'error',
+      message: 'We could not load the courts. Please check your connection.',
+    };
+  }
+}
+
 export default function CourtListScreen() {
   const [state, setState] = useState<ViewState>({ kind: 'loading' });
 
-  const loadCourts = useCallback(async () => {
-    setState({ kind: 'loading' });
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/courts`, {
-        headers: {
-          // For the local Prism mock server only.
-          // Session 9 will add real Keycloak authentication.
-          Authorization: 'Bearer mock-token',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed (${response.status})`);
-      }
-
-      const body: { items?: Court[] } = await response.json();
-      const courts = body.items ?? [];
-      if (courts.length === 0) {
-        setState({ kind: 'empty' });
-      } else {
-        setState({ kind: 'content', items: courts });
-      }
-    } catch {
-      setState({
-        kind: 'error',
-        message: 'We could not load the courts. Please check your connection.',
-      });
-    }
+  useEffect(() => {
+    loadCourts().then(setState);
   }, []);
 
-  useEffect(() => {
-    loadCourts();
-  }, [loadCourts]);
+  const reloadCourts = () => {
+    setState({ kind: 'loading' });
+    loadCourts().then(setState);
+  };
 
   const getCourtType = (type: string) => {
     switch (type) {
@@ -152,7 +152,7 @@ export default function CourtListScreen() {
         <Text style={styles.title}>Badminton Courts</Text>
         <Text style={styles.message}>{state.message}</Text>
 
-        <Pressable style={styles.button} onPress={loadCourts}>
+        <Pressable style={styles.button} onPress={reloadCourts}>
           <Text style={styles.buttonText}>Retry</Text>
         </Pressable>
       </View>
@@ -167,7 +167,7 @@ export default function CourtListScreen() {
           No courts are currently available.
         </Text>
 
-        <Pressable style={styles.button} onPress={loadCourts}>
+        <Pressable style={styles.button} onPress={reloadCourts}>
           <Text style={styles.buttonText}>Check again</Text>
         </Pressable>
       </View>
