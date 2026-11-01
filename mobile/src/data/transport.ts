@@ -10,9 +10,11 @@ export interface Transport {
 
 export class NetworkError extends Error {}
 
-// TODO (your group): one entry per operation your app queues, from your openapi.yaml.
+// One entry per operation the app calls, from openapi.yaml.
 const ROUTES: Record<string, (body: any) => { method: string; path: string }> = {
-  markDelivered: body => ({ method: 'POST', path: `/deliveries/${body.id}/delivered` }),
+  listCourts: () => ({ method: 'GET', path: '/courts?limit=100' }),
+  listBookings: () => ({ method: 'GET', path: '/bookings?limit=100' }),
+  createBooking: () => ({ method: 'POST', path: '/bookings' }),
 };
 
 export class HttpTransport implements Transport {
