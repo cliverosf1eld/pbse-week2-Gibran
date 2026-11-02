@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Auth } from '../data/auth';
 import { commonStyles, PrimaryButton } from './common';
@@ -9,13 +9,15 @@ export default function SignInScreen({ auth }: { auth: Auth }) {
   const signingIn = state.kind === 'signingIn';
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={commonStyles.screen}>
+    <SafeAreaView style={commonStyles.fill} edges={['bottom']}>
+      <ScrollView contentContainerStyle={commonStyles.scrollContent}>
         <Text style={commonStyles.message}>Sign in to browse and book badminton courts.</Text>
         {state.kind === 'idle' && state.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>⚠ {state.error}</Text>
+          <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
+            ⚠ {state.error}
+          </Text>
         ) : null}
-      </View>
+      </ScrollView>
       <View style={commonStyles.footer}>
         <PrimaryButton
           label={signingIn ? 'Signing in…' : 'Sign in'}
@@ -28,10 +30,6 @@ export default function SignInScreen({ auth }: { auth: Auth }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   error: {
     fontSize: 16,
     fontWeight: 'bold',

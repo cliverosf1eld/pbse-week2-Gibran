@@ -1,5 +1,6 @@
 // The pieces every screen draws: the primary button, the message states and the skeleton.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type PrimaryButtonProps = {
   label: string;
@@ -47,15 +48,18 @@ type MessageStateProps = {
 
 export function MessageState({ message, actionLabel, actionAccessibilityLabel, onAction }: MessageStateProps) {
   return (
-    <View style={commonStyles.screen}>
-      <Text style={commonStyles.message}>{message}</Text>
-      <View style={commonStyles.spacer} />
-      <PrimaryButton
-        label={actionLabel}
-        accessibilityLabel={actionAccessibilityLabel}
-        onPress={onAction}
-      />
-    </View>
+    <SafeAreaView style={commonStyles.fill} edges={['bottom']}>
+      <ScrollView contentContainerStyle={commonStyles.scrollContent}>
+        <Text style={commonStyles.message}>{message}</Text>
+      </ScrollView>
+      <View style={commonStyles.footer}>
+        <PrimaryButton
+          label={actionLabel}
+          accessibilityLabel={actionAccessibilityLabel}
+          onPress={onAction}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -79,8 +83,12 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 24,
   },
-  spacer: {
+  fill: {
     flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  scrollContent: {
+    padding: 24,
   },
   footer: {
     padding: 24,
@@ -126,7 +134,7 @@ export const commonStyles = StyleSheet.create({
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#aa3bff',
+    backgroundColor: '#8124d6',
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 8,
