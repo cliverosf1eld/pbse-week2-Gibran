@@ -423,6 +423,7 @@
         }
       ],
       "badminton-student-web": [],
+      "badminton-mobile": [],
       "badminton-admin-web": []
     }
   },
@@ -906,6 +907,69 @@
         "microprofile-jwt",
         "courts:write",
         "bookings:fulfil"
+      ]
+    },
+    {
+      "id": "b7e2c1d4-6f3a-4c8e-9a15-2d7f0e8b4c36",
+      "clientId": "badminton-mobile",
+      "name": "",
+      "description": "",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "badmintonbooking://callback",
+        "exp://*"
+      ],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": true,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "client.introspection.response.allow.jwt.claim.enabled": "false",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "use.refresh.tokens": "true",
+        "realm_client": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "client.use.lightweight.access.token.enabled": "false",
+        "backchannel.logout.session.required": "true",
+        "client_credentials.use_refresh_token": "false",
+        "tls.client.certificate.bound.access.tokens": "false",
+        "require.pushed.authorization.requests": "false",
+        "acr.loa.map": "{}",
+        "display.on.consent.screen": "false",
+        "pkce.code.challenge.method": "S256",
+        "token.response.type.bearer.lower-case": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "courts:read",
+        "profile",
+        "roles",
+        "badminton-api-audience",
+        "basic",
+        "email",
+        "bookings:read"
+      ],
+      "optionalClientScopes": [
+        "bookings:write",
+        "offline_access"
       ]
     },
     {

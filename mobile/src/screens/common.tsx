@@ -24,6 +24,20 @@ export function PrimaryButton({ label, accessibilityLabel, disabled, onPress }: 
   );
 }
 
+export function HeaderAction({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={8}
+      style={commonStyles.headerAction}
+      onPress={onPress}
+    >
+      <Text style={commonStyles.headerActionText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 type MessageStateProps = {
   message: string;
   actionLabel: string;
@@ -125,6 +139,16 @@ export const commonStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  headerAction: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  headerActionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#08060d',
   },
   skeletonTitle: {
     width: '55%',
