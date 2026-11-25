@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "badminton-booking": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp/server.mjs"],
+      "env": {
+        "BOOKING_API_BASE_URL": "${BOOKING_API_BASE_URL:-http://localhost:3000/v1}",
+        "BOOKING_ACCESS_TOKEN": "${BOOKING_ACCESS_TOKEN}"
+      }
+    }
+  }
+}
