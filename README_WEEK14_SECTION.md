@@ -7,3 +7,7 @@ The MCP server is a thin adapter in `mcp/server.mjs`. It exposes four read-only 
 The API continues to enforce the `courts:read` and `bookings:read` scopes. Booking visibility is derived from the authenticated token; the MCP tools do not accept an `ownerId`. All four tools are read-only, so the agent cannot create or cancel bookings or retire courts.
 
 For setup and demonstration instructions, see [`mcp/README.md`](mcp/README.md) and [`docs/week14-mcp-implementation.md`](docs/week14-mcp-implementation.md).
+
+### Known issue / team follow-up
+
+The local MCP token-refresh script currently fails because Keycloak rejects the requested `openid bookings:read` scopes for the `test-cli` client. Please verify the imported realm's `test-cli` client-scope configuration and confirm the token request works before the live demo. Keycloak also requires `KC_ADMIN_PASSWORD` in the project-root `.env` to start.

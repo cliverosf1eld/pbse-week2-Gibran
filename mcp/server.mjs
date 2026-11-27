@@ -1,16 +1,44 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod/v4";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseEnv } from "node:util";
 
 const SERVER_NAME = "badminton-booking";
 const SERVER_VERSION = "1.0.0";
 const DEFAULT_API_BASE_URL = "http://localhost:3000/v1";
 const REQUEST_TIMEOUT_MS = 12_000;
 
-const apiBaseUrl = (process.env.BOOKING_API_BASE_URL || DEFAULT_API_BASE_URL)
-  .trim()
-  .replace(/\/+$/, "");
-const accessToken = (process.env.BOOKING_ACCESS_TOKEN || "").trim();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ENV_PATH = path.join(__dirname, ".env");
+
+function getConfig() {
+  let fileEnv = {};
+
+  try {
+    fileEnv = parseEnv(fs.readFileSync(ENV_PATH, "utf8"));
+  } catch {
+    // Fall back to process.env if .env is unavailable.
+  }
+
+  return {
+    apiBaseUrl: (
+      fileEnv.BOOKING_API_BASE_URL ||
+      process.env.BOOKING_API_BASE_URL ||
+      DEFAULT_API_BASE_URL
+    )
+      .trim()
+      .replace(/\/+$/, ""),
+
+    accessToken: (
+      fileEnv.BOOKING_ACCESS_TOKEN ||
+      process.env.BOOKING_ACCESS_TOKEN ||
+      ""
+    ).trim()
+  };
+}
 
 class ApiError extends Error {
   constructor({ message, status = null, retryable = false, nextStep }) {
@@ -22,7 +50,7 @@ class ApiError extends Error {
   }
 }
 
-function makeUrl(path, query = {}) {
+function makeUrl(apiBaseUrl, path, query = {}) {
   const url = new URL(`${apiBaseUrl}/${path.replace(/^\/+/, "")}`);
 
   for (const [key, value] of Object.entries(query)) {
@@ -35,6 +63,8 @@ function makeUrl(path, query = {}) {
 }
 
 async function apiGet(path, query = {}) {
+  const { apiBaseUrl, accessToken } = getConfig();
+
   if (!accessToken) {
     throw new ApiError({
       message: "BOOKING_ACCESS_TOKEN is not configured.",
@@ -46,7 +76,7 @@ async function apiGet(path, query = {}) {
 
   let response;
   try {
-    response = await fetch(makeUrl(path, query), {
+    response = await fetch(makeUrl(apiBaseUrl, path, query), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -80,7 +110,7 @@ async function apiGet(path, query = {}) {
 
     if (status === 401) {
       nextStep =
-        "The access token is missing, expired, or issued by a different Keycloak instance. Obtain a fresh token from the same Keycloak realm that issued tokens for this API, update the environment variable, and retry once.";
+        "Run npm run token in mcp/, then retry once.";
     } else if (status === 403) {
       nextStep = requiredScopes.length
         ? `This token lacks ${requiredScopes.join(", ")}. Obtain a token with the required scope; retrying with the same token will not help.`

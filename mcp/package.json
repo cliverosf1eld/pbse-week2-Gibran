@@ -5,7 +5,8 @@
   "description": "Read-only MCP tools for the Badminton Court Booking API",
   "type": "module",
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "token": "node get-token.mjs"
   },
   "engines": {
     "node": ">=20"
